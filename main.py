@@ -25,6 +25,8 @@ RACE CONDITIONS PREVENTED:
 - Collision detection synchronized with position updates
 """
 
+# Nick wrote this
+
 import pygame
 import threading
 import time
@@ -76,10 +78,11 @@ CAR_COLORS = [RED, GREEN, BLUE, YELLOW]
 
 
 # ============================================================================
-# CAR CLASS
+# CAR CLASS by Nicholas Keane
 # Represents individual race car with its own thread
 # ============================================================================
 
+# Nick wrote this
 class Car:
     """
     Car object that runs in its own thread.
