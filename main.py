@@ -333,12 +333,12 @@ class RacingGame:
                     daemon=True
                 )
                 car.thread.start()
-
+    #Thomas's Code
     def car_movement_thread(self, car):
         """
         Thread function for autonomous car movement.
 
-        THREAD FUNCTION: Runs in separate thread for each AI car
+        THREAD FUNCTION: Runs in separate thread for each car
 
         SYNCHRONIZATION:
         - Checks pause_event before each movement
@@ -405,7 +405,7 @@ class RacingGame:
 
             # Sleep to control thread execution rate (simulate thread scheduling)
             time.sleep(0.016)  # Approximately 60 FPS
-
+    # Thomas's code
     def handle_player_input(self):
         """
         Handle player keyboard input for car control.
@@ -467,7 +467,7 @@ class RacingGame:
                 player_car.lane += 1
                 player_car.y = player_car.lane * LANE_HEIGHT + (LANE_HEIGHT - CAR_HEIGHT) // 2
                 time.sleep(0.2)
-    
+    #Thomas's code
     def toggle_pause(self):
         """
         Pause/Resume race using threading.Event.
