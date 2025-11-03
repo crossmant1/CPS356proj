@@ -198,7 +198,7 @@ class PowerUp:
 
 
 # ============================================================================
-# GAME CLASS
+# GAME CLASS Rendering: David Weaver, 
 # Main game controller managing all threads and synchronization
 # ============================================================================
 
@@ -464,7 +464,7 @@ class RacingGame:
                 player_car.lane += 1
                 player_car.y = player_car.lane * LANE_HEIGHT + (LANE_HEIGHT - CAR_HEIGHT) // 2
                 time.sleep(0.2)
-
+    
     def toggle_pause(self):
         """
         Pause/Resume race using threading.Event.
@@ -481,10 +481,8 @@ class RacingGame:
             else:
                 self.pause_event.set()  # Resume
                 self.game_state = "racing"
-
+    # David's code
     def draw_track(self):
-        """Draw the racing track background"""
-
         # Background
         self.screen.fill(GRAY)
 
@@ -500,15 +498,8 @@ class RacingGame:
         for i in range(0, WINDOW_HEIGHT, 20):
             color = WHITE if (i // 20) % 2 == 0 else BLACK
             pygame.draw.rect(self.screen, color, (FINISH_LINE_X, i, 20, 20))
-
+    # David's code
     def draw_game_objects(self):
-        """
-        Draw all game objects (cars, obstacles, powerups).
-
-        THREAD SAFETY: Reading shared state
-        Uses lock to ensure consistent read of positions
-        """
-
         with self.state_lock:
             # Draw obstacles
             for obstacle in self.obstacles:
@@ -565,10 +556,8 @@ class RacingGame:
                 if car.is_player:
                     text = self.small_font.render("YOU", True, WHITE)
                     self.screen.blit(text, (int(car.x), int(car.y - 20)))
-
+    # David's code 
     def draw_ui(self):
-        """Draw user interface elements"""
-
         # Race timer
         if self.race_start_time and self.game_state in ["racing", "paused"]:
             elapsed = time.time() - self.race_start_time
@@ -618,15 +607,6 @@ class RacingGame:
                     self.screen.blit(restart, (WINDOW_WIDTH // 2 - 100, WINDOW_HEIGHT // 2 + 40))
 
     def run(self):
-        """
-        Main game loop - runs in main thread.
-
-        THREAD COORDINATION:
-        - Main thread handles events and rendering
-        - Car threads handle autonomous movement
-        - All threads synchronized via locks and events
-        """
-
         running = True
 
         while running:
@@ -648,7 +628,7 @@ class RacingGame:
             # Handle player input
             self.handle_player_input()
 
-            # Rendering
+            # Rendering: David
             self.draw_track()
             self.draw_game_objects()
             self.draw_ui()
@@ -673,15 +653,5 @@ class RacingGame:
 # ============================================================================
 
 if __name__ == "__main__":
-    """
-    Program entry point.
-
-    EXECUTION FLOW:
-    1. Create game instance
-    2. Start main game loop (main thread)
-    3. Car threads created when race starts
-    4. All threads coordinated via synchronization primitives
-    """
-
     game = RacingGame()
     game.run()
