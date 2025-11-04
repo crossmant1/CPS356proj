@@ -120,14 +120,14 @@ class Car:
         """
 
         if self.hasSpeedBoost:
-            self.speedBoostTimer -= deltaTime
+            self.speedBoostTimer = deltaTime - self.speedBoostTimer
 
             if self.speedBoostTimer <= 0:
                 self.hasSpeedBoost = False
                 self.current_speed = self.base_speed
 
         if self.hasShield:
-            self.shieldTimer -= deltaTime
+            self.shieldTimer = deltaTime - self.shieldTimer
 
             if self.shieldTimer <= 0:
                 self.hasShield = False
