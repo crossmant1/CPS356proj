@@ -402,8 +402,8 @@ class RacingGame:
                 self.game_state = "racing"
 
     # David's code
-    def draw_track(self):
-        # draws the track background and lines
+    def draw_track(self): # im doing snake case since a lot of the code is like that
+        # draw the track background and lines
         self.screen.fill(GRAY)
 
         # draw white lines between lanes
@@ -421,7 +421,7 @@ class RacingGame:
 
     # David's code
     def draw_game_objects(self):
-        # draw all the stuff on screen like cars, powerups, etc
+        # draw all the stuff on screen
         with self.state_lock:
             # draw each obstacle
             for obstacle in self.obstacles:
@@ -457,7 +457,7 @@ class RacingGame:
                                             int(powerup.y + POWERUP_SIZE // 2)),
                                            POWERUP_SIZE // 3, 2)
 
-            # draw all cars
+            # draw car
             for car in self.cars:
                 pygame.draw.rect(self.screen, car.color,
                                  (int(car.x), int(car.y), CAR_WIDTH, CAR_HEIGHT))
@@ -480,13 +480,13 @@ class RacingGame:
 
     # David's code
     def draw_ui(self):
-        # Race timer
+        # race timer
         if self.race_start_time and self.game_state in ["racing", "paused"]:
             elapsed = time.time() - self.race_start_time
             timer_text = self.small_font.render(f"Time: {elapsed:.2f}s", True, WHITE)
             self.screen.blit(timer_text, (10, 10))
 
-        # Game state
+        # game state
         if self.game_state == "menu":
             title = self.font.render("Multi-threaded Racing Game", True, WHITE)
             self.screen.blit(title, (WINDOW_WIDTH // 2 - 250, WINDOW_HEIGHT // 2 - 100))
