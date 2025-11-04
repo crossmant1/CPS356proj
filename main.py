@@ -1,29 +1,3 @@
-"""
-======================================
-CPS 356: Operating Systems - Project 1
-======================================
-
-THREADING ARCHITECTURE:
-- Main thread: Handles pygame event loop and rendering
-- Car threads: Each car runs in its own thread for concurrent movement
-- Timer thread: Tracks race elapsed time
-- All threads synchronized using threading primitives
-
-SYNCHRONIZATION MECHANISMS:
-- threading.Lock (Mutex): Protects shared game state (car positions, winner)
-- threading.Event: Used for pause/resume functionality
-- Atomic operations: Flag checks for race completion
-
-BONUS FEATURES IMPLEMENTED:
-1. Obstacles: Random obstacles on track that slow down cars
-2. Power-ups: Speed boost and shield/invincibility
-3. Multiplayer: Player can control one car with arrow keys
-
-RACE CONDITIONS PREVENTED:
-- Grid state updates protected by mutex
-- Winner detection uses lock to ensure only one winner
-- Collision detection synchronized with position updates
-"""
 
 # Nick wrote this
 
@@ -333,86 +307,70 @@ class RacingGame:
                     daemon=True
                 )
                 car.thread.start()
-    #Thomas's Code
+     # Thomas's code
     def car_movement_thread(self, car):
-        """
-        Thread function for autonomous car movement.
-
-        THREAD FUNCTION: Runs in separate thread for each car
-
-        SYNCHRONIZATION:
-        - Checks pause_event before each movement
-        - Uses state_lock when updating position
-        - Checks race_active flag to know when to exit
-
-        RACE CONDITIONS PREVENTED:
-        - Position updates are atomic (protected by lock)
-        - Collision detection synchronized with movement
-        - Winner detection uses lock and atomic flag
-        """
+        # this function runs in a thread to make the cars move by themself
 
         last_update = time.time()
 
         while self.race_active and not car.finished:
-            # Wait if game is paused
+            # if game paused, just wait here till resume
             self.pause_event.wait()
 
-            # Calculate delta time for frame-independent movement
+            # figuring out how much time passed since last frame
             current_time = time.time()
-            dt = current_time - last_update
+            dt = current_time - last_update 
             last_update = current_time
 
-            # Update power-up timers (no lock needed, car-local data)
+            # update the powerups for this car (only affects this car)
             car.updatePowerUps(dt)
 
-            # Random speed variation to simulate realistic racing
+            # make car speed vary a bit so it dont look too robotic
             speed_multiplier = random.uniform(0.8, 1.2)
             move_distance = car.current_speed * speed_multiplier
 
-            # CRITICAL SECTION: Update car position and check collisions
+            # lock shared game data so cars dont mess each other up
             with self.state_lock:
                 if not self.race_active:
                     break
 
-                # Move car forward
+                # move the car ahead by the distance we calc’d
                 car.x += move_distance
 
-                # Check collision with obstacles
+                # check if car hits any obstacles
                 car_rect = car.get_rect()
                 for obstacle in self.obstacles:
                     if obstacle.active and car_rect.colliderect(obstacle.getRectangle()):
                         if not car.hasShield:
-                            # Slow down car on collision
+                            # bump back the car a bit when hit something
                             car.x -= move_distance * 0.5
-                        obstacle.active = False  # Remove obstacle after hit
+                        obstacle.active = False  # obstacle disappears after hit
 
-                # Check collision with power-ups
+                # check powerups collision
                 for powerup in self.powerups:
                     if powerup.active and car_rect.colliderect(powerup.getRectangle()):
+                        # apply the powerup to car
                         car.powerUpType(powerup.type)
                         powerup.active = False
 
-                # Check if car reached finish line
+                # if car reaches the end line
                 if car.x >= FINISH_LINE_X and not car.finished:
                     car.finished = True
                     car.finish_time = time.time() - self.race_start_time
 
-                    # CRITICAL SECTION: Winner declaration (atomic operation)
+                    # set the winner if not set yet (only once)
                     if not self.winner_declared:
                         self.winner_declared = True
                         self.winner = car
                         self.game_state = "finished"
 
-            # Sleep to control thread execution rate (simulate thread scheduling)
-            time.sleep(0.016)  # Approximately 60 FPS
+            # slow down the loop to kinda match 60fps update
+            time.sleep(0.016)
+    
+
     # Thomas's code
     def handle_player_input(self):
-        """
-        Handle player keyboard input for car control.
-
-        THREAD SAFETY: Called from main thread only
-        Uses lock when modifying car position
-        """
+        # checks for key presses to control the player car
 
         if self.game_state != "racing" or not self.race_active:
             return
@@ -423,31 +381,33 @@ class RacingGame:
         if player_car.finished:
             return
 
-        # Calculate delta time
+        # figure delta time for powerup logic
         dt = self.clock.get_time() / 1000.0
         player_car.updatePowerUps(dt)
 
-        # CRITICAL SECTION: Update player car position
+        # lock stuff so two things dont change car at same time
         with self.state_lock:
-            # Forward movement
+            # move right if pressing arrow
             if keys[pygame.K_RIGHT]:
                 move_distance = player_car.current_speed * 1.5
                 player_car.x += move_distance
 
-                # Check collisions
+                # check if hit obstacle
                 car_rect = player_car.get_rect()
                 for obstacle in self.obstacles:
                     if obstacle.active and car_rect.colliderect(obstacle.getRectangle()):
                         if not player_car.hasShield:
+                            # kinda push car back when hit
                             player_car.x -= move_distance * 0.5
                         obstacle.active = False
 
+                # check if get powerup
                 for powerup in self.powerups:
                     if powerup.active and car_rect.colliderect(powerup.getRectangle()):
                         player_car.powerUpType(powerup.type)
                         powerup.active = False
 
-                # Check finish line
+                # see if player reach finish
                 if player_car.x >= FINISH_LINE_X and not player_car.finished:
                     player_car.finished = True
                     player_car.finish_time = time.time() - self.race_start_time
@@ -457,54 +417,58 @@ class RacingGame:
                         self.winner = player_car
                         self.game_state = "finished"
 
-            # Lane switching
+            # move up/down for lane change
             if keys[pygame.K_UP] and player_car.lane > 0:
                 player_car.lane -= 1
                 player_car.y = player_car.lane * LANE_HEIGHT + (LANE_HEIGHT - CAR_HEIGHT) // 2
-                time.sleep(0.2)  # Prevent rapid lane switching
+                time.sleep(0.2)  # delay so cant spam switch too fast
 
             if keys[pygame.K_DOWN] and player_car.lane < TRACK_LANES - 1:
                 player_car.lane += 1
                 player_car.y = player_car.lane * LANE_HEIGHT + (LANE_HEIGHT - CAR_HEIGHT) // 2
                 time.sleep(0.2)
+    
+
     #Thomas's code
     def toggle_pause(self):
-        """
-        Pause/Resume race using threading.Event.
-
-        SYNCHRONIZATION: Event-based pause mechanism
-        - clear() blocks all waiting threads
-        - set() releases all waiting threads
-        """
+        # pause or resume the race, depending on what it is right now
 
         if self.game_state == "racing":
             if self.pause_event.is_set():
-                self.pause_event.clear()  # Pause
+                # pause the race
+                self.pause_event.clear()
                 self.game_state = "paused"
             else:
-                self.pause_event.set()  # Resume
+                # unpause and go back to racing
+                self.pause_event.set()
                 self.game_state = "racing"
+    
+
     # David's code
     def draw_track(self):
-        # Background
+        # draws the track background and lines
+
         self.screen.fill(GRAY)
 
-        # Lane dividers
+        # draw white lines between lanes
         for i in range(1, TRACK_LANES):
             y = i * LANE_HEIGHT
             pygame.draw.line(self.screen, WHITE, (0, y), (WINDOW_WIDTH, y), 2)
 
-        # Start line
+        # start line on left
         pygame.draw.line(self.screen, GREEN, (START_X, 0), (START_X, WINDOW_HEIGHT), 4)
 
-        # Finish line (checkered pattern)
+        # finish line (checker pattern)
         for i in range(0, WINDOW_HEIGHT, 20):
             color = WHITE if (i // 20) % 2 == 0 else BLACK
             pygame.draw.rect(self.screen, color, (FINISH_LINE_X, i, 20, 20))
+    
+
     # David's code
     def draw_game_objects(self):
+        # draw all the stuff on screen like cars, powerups, etc
         with self.state_lock:
-            # Draw obstacles
+            # draw each obstacle
             for obstacle in self.obstacles:
                 if obstacle.active:
                     pygame.draw.rect(self.screen, ORANGE,
@@ -512,7 +476,7 @@ class RacingGame:
                     pygame.draw.rect(self.screen, BLACK,
                                      (obstacle.x, obstacle.y, OBSTACLE_SIZE, OBSTACLE_SIZE), 2)
 
-            # Draw power-ups
+            # draw the powerups
             for powerup in self.powerups:
                 if powerup.active:
                     color = GOLD if powerup.type == "speed" else PURPLE
@@ -521,9 +485,9 @@ class RacingGame:
                                         int(powerup.y + POWERUP_SIZE // 2)),
                                        POWERUP_SIZE // 2)
 
-                    # Draw icon
+                    # draw a small icon on it so we know what it is
                     if powerup.type == "speed":
-                        # Lightning bolt
+                        # lightning shape kinda thing
                         points = [(powerup.x + 12, powerup.y + 5),
                                   (powerup.x + 15, powerup.y + 12),
                                   (powerup.x + 13, powerup.y + 12),
@@ -532,21 +496,20 @@ class RacingGame:
                                   (powerup.x + 12, powerup.y + 13)]
                         pygame.draw.polygon(self.screen, WHITE, points)
                     else:
-                        # Shield
+                        # circle shield shape
                         pygame.draw.circle(self.screen, WHITE,
                                            (int(powerup.x + POWERUP_SIZE // 2),
                                             int(powerup.y + POWERUP_SIZE // 2)),
                                            POWERUP_SIZE // 3, 2)
 
-            # Draw cars
+            # draw all cars
             for car in self.cars:
-                # Car body
                 pygame.draw.rect(self.screen, car.color,
                                  (int(car.x), int(car.y), CAR_WIDTH, CAR_HEIGHT))
                 pygame.draw.rect(self.screen, BLACK,
                                  (int(car.x), int(car.y), CAR_WIDTH, CAR_HEIGHT), 2)
 
-                # Draw power-up indicators
+                # little circles to show active boosts
                 if car.hasSpeedBoost:
                     pygame.draw.circle(self.screen, GOLD,
                                        (int(car.x + CAR_WIDTH - 5), int(car.y + 5)), 5)
@@ -555,10 +518,11 @@ class RacingGame:
                                        (int(car.x + CAR_WIDTH // 2), int(car.y + CAR_HEIGHT // 2)),
                                        CAR_HEIGHT, 2)
 
-                # Player indicator
+                # label the player car
                 if car.is_player:
                     text = self.small_font.render("YOU", True, WHITE)
                     self.screen.blit(text, (int(car.x), int(car.y - 20)))
+
     # David's code 
     def draw_ui(self):
         # Race timer
