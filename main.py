@@ -180,16 +180,6 @@ class PowerUp:
 # ============================================================================
 
 class RacingGame:
-    """
-    Main game class coordinating all threads and managing shared state.
-
-    SYNCHRONIZATION STRATEGY:
-    - state_lock: Protects all shared game state (mutex)
-    - pause_event: Controls thread execution (event signaling)
-    - race_active: Atomic flag for race status
-    - winner_declared: Atomic flag to prevent multiple winners
-    """
-
     def __init__(self):
         # Initialize pygame
         pygame.init()
@@ -229,12 +219,6 @@ class RacingGame:
         self.initialize_game_objects()
 
     def initialize_game_objects(self):
-        """
-        Initialize all game objects: cars, obstacles, powerups.
-
-        THREAD SAFETY: Called only from main thread during setup
-        No lock needed as no other threads are running yet
-        """
 
         # Create cars (first car is player-controlled)
         self.cars = []
@@ -446,7 +430,7 @@ class RacingGame:
 
     # David's code
     def draw_track(self):
-        # draws the track background and lines
+        # draw the track background and lines
 
         self.screen.fill(GRAY)
 
@@ -466,7 +450,7 @@ class RacingGame:
 
     # David's code
     def draw_game_objects(self):
-        # draw all the stuff on screen like cars, powerups, etc
+        # draw all the stuff on screen
         with self.state_lock:
             # draw each obstacle
             for obstacle in self.obstacles:
@@ -502,7 +486,7 @@ class RacingGame:
                                             int(powerup.y + POWERUP_SIZE // 2)),
                                            POWERUP_SIZE // 3, 2)
 
-            # draw all cars
+            # draw cars
             for car in self.cars:
                 pygame.draw.rect(self.screen, car.color,
                                  (int(car.x), int(car.y), CAR_WIDTH, CAR_HEIGHT))
